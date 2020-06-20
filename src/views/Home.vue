@@ -3,10 +3,10 @@
     <table>
       <tr>
         <td>
-          <h1>{{user.displayName}}さんようこそ！</h1>
+          <h1>{{ user.displayName }}さんようこそ！</h1>
         </td>
         <td>
-          <h1>残高:{{loginUser}}</h1>
+          <h1>残高:{{ loginUser }}</h1>
         </td>
         <td>
           <button @click="logout">ログアウト</button>
@@ -17,13 +17,17 @@
     <table>
       <tbody>
         <tr v-for="item in wipItems" :key="item.username">
-          <td>{{item.username}}</td>
+          <td>{{ item.username }}</td>
           <td>
             <div class="example-modal-window">
               <button @click="openModal(item)">wallteを見る</button>
-              <MyModal class="mymodal" @close="closeModal(item)" v-if="item.openModal">
-                <p>{{item.username}}さんの残高</p>
-                <p>{{item.balance}}</p>
+              <MyModal
+                class="mymodal"
+                @close="closeModal(item)"
+                v-if="item.openModal"
+              >
+                <p>{{ item.username }}さんの残高</p>
+                <p>{{ item.balance }}</p>
                 <template slot="footer">
                   <button @click="closeModal(item)">閉じる</button>
                 </template>
@@ -35,7 +39,7 @@
             <div class="example-modal-window">
               <button @click="openSendModal(item)">送る</button>
               <MyModal @close="closeSendModal(item)" v-if="item.sendModal">
-                <p>あなたの残高:{{item.balance}}</p>
+                <p>あなたの残高:{{ items.balance }}</p>
                 <p>送る金額</p>
                 <div>
                   <input v-model="message" />
@@ -74,19 +78,19 @@ export default {
       loginUser: "",
       modal: false,
       message: "",
-      snapshot:[]
+      snapshot: [],
     };
   },
   methods: {
     ...mapActions(["setUser"]),
-    logout: function() {
+    logout: function () {
       firebase
         .auth()
         .signOut()
         .then(() => {
           // this.$router.push("/login");
         })
-        .catch(error => {
+        .catch((error) => {
           alert(error.message);
         });
     },
@@ -108,87 +112,77 @@ export default {
       usersRef
         .doc("3ZKSPc3SbJhPcuInaLVDRcHtICT2")
         .update({ balance: "100" })
-        .then(usersRef => {
+        .then((usersRef) => {
           if (usersRef) {
             console.log("Success edit user.");
           }
         })
-        .catch(error => {
+        .catch((error) => {
           console.error("Error edit user: ", error);
         });
-    }
+    },
   },
   computed: {
     user() {
       return this.$store.getters.user;
-    }
+    },
   },
   created() {
-    this.$nextTick(function() {
+    this.$nextTick(function () {
       const self = this;
-      firebase.auth().onAuthStateChanged(function(user) {
+      firebase.auth().onAuthStateChanged((user) => {
         if (user) {
           const userInfo = user;
           self.setUser(userInfo);
-
-          firebaseApp
-            .firestore()
-            .collection("users")
-            .get()
-            .then(querySnapshot => {
-              querySnapshot.forEach(doc => {
-                self.items.push(doc.data());
-              });
-              console.log('querySnapshot',self.items)
-
-              
-              let db = firebase.firestore();
-              db.collection("users")
-              .onSnapshot(snapshot => {
-                snapshot.docs.forEach(doc => {
-                    self.items.push(doc.data());
-                });
-              });
-
-              //  console.log(self.snapshot);
-
-              // console.log(self.items);
-
-              self.filteredItems = self.items.filter(function(item) {
-                return (
-                  item.username !== firebase.auth().currentUser.displayName
-                );
-              });
-              self.filteredItems.forEach(elm => {
-                self.wipItems.push({
-                  username: elm.username,
-                  balance: elm.balance,
-                  openModal: false,
-                  sendModal: false
-                });
-              });
-
-              self.filteredItems.forEach(elm => {
-                self.sendItems.push({
-                  username: elm.username,
-                  balance: elm.balance,
-                  modal: false
-                });
-              });
-              self.loginUsers = self.items.filter(function(item) {
-                return (
-                  item.username === firebase.auth().currentUser.displayName
-                );
-              });
-              self.loginUser = self.loginUsers[0].balance;
-            });
-
-
         } else {
           self.$router.push("/login");
         }
       });
+      firebaseApp
+        .firestore()
+        .collection("users")
+        .get()
+        .then((querySnapshot) => {
+          querySnapshot.forEach((doc) => {
+            self.items.push(doc.data());
+          });
+        });
+
+      const db = firebase.firestore();
+      db.collection("users").onSnapshot((snapshot) => {
+        const arrItems = [];
+        snapshot.docs.forEach((doc) => {
+          arrItems.push(doc.data());
+        });
+        self.items = arrItems;
+        const userName = firebase.auth().currentUser.displayName;
+        self.filteredItems = self.items.filter((item) => {
+          return item.username !== userName;
+        });
+
+        self.wipItems = self.filteredItems.map((elm) => {
+          return {
+            username: elm.username,
+            balance: elm.balance,
+            openModal: false,
+            sendModal: false,
+          };
+        });
+
+        self.sendItems = self.filteredItems.map((elm) => {
+          return {
+            username: elm.username,
+            balance: elm.balance,
+            modal: false,
+          };
+        });
+
+        self.loginUsers = self.items.filter((item) => {
+          return item.username === userName;
+        });
+        self.loginUser = self.loginUsers[0].balance;
+      });
     });
-  }
+  },
 };
 </script>
